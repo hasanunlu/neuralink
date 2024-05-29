@@ -107,16 +107,6 @@ void encode_full(const vector<int16_t>& data, vector<uint8_t>& encoded_data_in_b
     huffmancode_str = serializeHuffmanTable(huffmanCode);
     string encodedString = encode(data, huffmanCode);
     encoded_data_in_bytes = packBitsToBytes(encodedString);
-    unordered_map<int16_t, string> huffmanCode_recovered = deserializeHuffmanTable(huffmancode_str);
-    Node* root_recovered = buildTreeFromHuffmanCode(huffmanCode_recovered);
-    vector<int16_t> decodedData = decode(root_recovered, unpackBytesToBits(encoded_data_in_bytes));
-
-    for (size_t i = 0; i < data.size(); i++ ) {
-        if (decodedData[i] != data[i])
-        {
-            cout << "mismatch in huffman for index " << i << " out of " << data.size() << endl;
-        }
-    }
 }
 
 int main(int argc, char* argv[]) {
