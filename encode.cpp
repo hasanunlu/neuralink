@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <sstream>
 #include "huffman.hpp"
-#include "header.hpp"
 
 using namespace std;
 
@@ -94,11 +93,17 @@ private:
     vector<uint8_t> data;
 };
 
-void encode_full(const vector<int16_t>& data, vector<uint8_t>& encoded_data_in_bytes, string& huffmancode_str)
+void encode_full(const vector<int16_t>& data, vector<uint8_t>& encoded_data_in_bytes, vector<uint8_t>& huffmancode_str)
 {
     Node* root = buildHuffmanTree(data);
     unordered_map<int16_t, string> huffmanCode;
     generateCodes(root, "", huffmanCode);
+
+    // cout << "Huffman Codes are:\n";
+    // for (auto pair : huffmanCode) {
+    //     cout << pair.first << " " << pair.second << "\n";
+    // }
+
     huffmancode_str = serializeHuffmanTable(huffmanCode);
     string encodedString = encode(data, huffmanCode);
     encoded_data_in_bytes = packBitsToBytes(encodedString);
@@ -148,7 +153,7 @@ int main(int argc, char* argv[]) {
     }
 
     vector<uint8_t> encoded_data_in_bytes[2];
-    string huffmancode_str[2];
+    vector<uint8_t> huffmancode_str[2];
     encode_full(first_element_of_group, encoded_data_in_bytes[0], huffmancode_str[0]);
     encode_full(other_elements_of_group, encoded_data_in_bytes[1], huffmancode_str[1]);
 
@@ -163,9 +168,9 @@ int main(int argc, char* argv[]) {
     outFile.write(reinterpret_cast<const char*>(&h), sizeof(WAVHeader));
     outFile.write(reinterpret_cast<const char*>(&table_offset), sizeof(table_offset));
 
-    outFile.write(huffmancode_str[0].c_str(), huffmancode_str[0].size());
+    outFile.write(reinterpret_cast<const char*>(huffmancode_str[0].data()), huffmancode_str[0].size());
     outFile.write(reinterpret_cast<const char*>(encoded_data_in_bytes[0].data()), encoded_data_in_bytes[0].size());
-    outFile.write(huffmancode_str[1].c_str(), huffmancode_str[1].size());
+    outFile.write(reinterpret_cast<const char*>(huffmancode_str[1].data()), huffmancode_str[1].size());
     outFile.write(reinterpret_cast<const char*>(encoded_data_in_bytes[1].data()), encoded_data_in_bytes[1].size());
     outFile.close();
 

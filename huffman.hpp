@@ -4,6 +4,16 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <cmath>
+#include "header.hpp"
+
+template <typename T>
+std::vector<T> slice(const std::vector<T>& vec, size_t start, size_t end) {
+    if (start > end || end > vec.size()) {
+        throw std::out_of_range("Invalid slice range");
+    }
+    return std::vector<T>(vec.begin() + start, vec.begin() + end);
+}
 
 using namespace std;
 
@@ -130,22 +140,59 @@ vector<int16_t> decode(Node* root, const string& encodedString) {
     return decodedData;
 }
 
-string serializeHuffmanTable(const unordered_map<int16_t, string>& huffmanCode) {
-    ostringstream oss;
+vector<uint8_t> serializeHuffmanTable(const unordered_map<int16_t, string>& huffmanCode) {
+    vector<uint8_t> packed_bytes;
     for (const auto& pair : huffmanCode) {
-        oss << pair.first << " " << pair.second << "\n";
+        packed_bytes.push_back(static_cast<uint8_t>(pair.first & 0xFF));
+        packed_bytes.push_back(static_cast<uint8_t>((pair.first >> 8) & 0xFF));
+        if (pair.second.size() > ((2^16)-1))
+        {
+            cerr << "codebook is beyond limit" << endl;
+        }
+        uint16_t l = (pair.second).size();
+        // cout << pair.first <<  " l: " << l << " " << pair.second << endl;
+
+        packed_bytes.push_back(static_cast<uint8_t>(l & 0xFF));
+        packed_bytes.push_back(static_cast<uint8_t>((l >> 8) & 0xFF));
+
+        vector<uint8_t> p = packBitsToBytes(pair.second);
+        packed_bytes.insert(packed_bytes.end(), p.begin(), p.end());
+        packed_bytes.push_back(static_cast<uint8_t>('\n'));
     }
-    return oss.str();
+
+    // for (int i = 0; i < packed_bytes.size(); i++)
+    // {
+    //     cout << static_cast<uint32_t>(packed_bytes[i]) <<  " ";
+    // }
+
+    // cout << "size " << packed_bytes.size() << endl;
+    return packed_bytes;
 }
 
-unordered_map<int16_t, string> deserializeHuffmanTable(const string& serializedTable) {
+unordered_map<int16_t, string> deserializeHuffmanTable(const vector<uint8_t>& serializedTable) {
     unordered_map<int16_t, string> huffmanCode;
-    istringstream iss(serializedTable);
-    int16_t value;
-    string code;
 
-    while (iss >> value >> code) {
-        huffmanCode[value] = code;
+    for (size_t i = 0; i < serializedTable.size(); )
+    {
+        int16_t value;
+        value = serializedTable[i] | (serializedTable[i + 1] << 8);
+        uint16_t symbol_length;
+        symbol_length = serializedTable[i + 2] | (serializedTable[i + 3] << 8);
+        i = i + 4;
+        size_t start = i;
+
+        size_t in_bytes = ceil(symbol_length / 8.0);
+        i = i + in_bytes;
+
+        if(serializedTable[i] != static_cast<uint8_t>('\n'))
+        {
+            cerr << "WRONG ENDING SEQUENCE" << endl;
+        }
+        string code = unpackBytesToBits(slice(serializedTable, start, i));
+        huffmanCode[value] = code.substr(0, symbol_length);
+        // cout << value <<  " " << symbol_length << " " << start << " " << i << " " << huffmanCode[value] << endl;
+
+        i++;
     }
 
     return huffmanCode;

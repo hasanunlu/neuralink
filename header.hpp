@@ -1,4 +1,6 @@
-#define GROUP 4
+using namespace std;
+
+#define GROUP 2
 
 #pragma pack(push, 1)
 struct WAVHeader {

@@ -7,11 +7,10 @@
 #include <cstdint>
 #include <sstream>
 #include "huffman.hpp"
-#include "header.hpp"
 
 using namespace std;
 
-void decode_full(vector<int16_t>& decodedData, const vector<uint8_t>& encoded_data_in_bytes, const string& huffmancode_str)
+void decode_full(vector<int16_t>& decodedData, const vector<uint8_t>& encoded_data_in_bytes, const vector<uint8_t>& huffmancode_str)
 {
     unordered_map<int16_t, string> huffmanCode_recovered = deserializeHuffmanTable(huffmancode_str);
     Node* root_recovered = buildTreeFromHuffmanCode(huffmanCode_recovered);
@@ -26,9 +25,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::ifstream inFile(argv[1], std::ios::binary);
+    ifstream inFile(argv[1], ios::binary);
     if (!inFile) {
-        std::cerr << "Error opening input file" << std::endl;
+        cerr << "Error opening input file" << endl;
         return 1;
     }
 
@@ -41,31 +40,29 @@ int main(int argc, char* argv[]) {
     inFile.read(reinterpret_cast<char*>(&table_offset_ff), sizeof(table_offset_ff));
 
     // Read Huffman codes
-    std::vector<char> ht1(table_offset_ff.ht1_size);
-    inFile.read(ht1.data(), table_offset_ff.ht1_size);
-    std::string huffmancode_str_ff_1(ht1.begin(), ht1.end());
+    vector<uint8_t> ht1(table_offset_ff.ht1_size);
+    inFile.read(reinterpret_cast<char*>(ht1.data()), table_offset_ff.ht1_size);
 
     // Read the first encoded data
-    std::vector<uint8_t> encoded_data_in_bytes_ff_1(table_offset_ff.h1_size);
+    vector<uint8_t> encoded_data_in_bytes_ff_1(table_offset_ff.h1_size);
     inFile.read(reinterpret_cast<char*>(encoded_data_in_bytes_ff_1.data()), table_offset_ff.h1_size);
 
     // Read Huffman codes
-    std::vector<char> ht2(table_offset_ff.ht2_size);
-    inFile.read(ht2.data(), table_offset_ff.ht2_size);
-    std::string huffmancode_str_ff_2(ht2.begin(), ht2.end());
+    vector<uint8_t> ht2(table_offset_ff.ht2_size);
+    inFile.read(reinterpret_cast<char*>(ht2.data()), table_offset_ff.ht2_size);
 
     // Read the second encoded data
-    std::vector<uint8_t> encoded_data_in_bytes_ff_2(table_offset_ff.h2_size);
+    vector<uint8_t> encoded_data_in_bytes_ff_2(table_offset_ff.h2_size);
     inFile.read(reinterpret_cast<char*>(encoded_data_in_bytes_ff_2.data()), table_offset_ff.h2_size);
 
     inFile.close();
 
     vector<int16_t> first_element_of_group_decoded;
     vector<int16_t> other_elements_of_group_decoded;
-    decode_full(first_element_of_group_decoded, encoded_data_in_bytes_ff_1, huffmancode_str_ff_1);
-    decode_full(other_elements_of_group_decoded, encoded_data_in_bytes_ff_2, huffmancode_str_ff_2);
+    decode_full(first_element_of_group_decoded, encoded_data_in_bytes_ff_1, ht1);
+    decode_full(other_elements_of_group_decoded, encoded_data_in_bytes_ff_2, ht2);
 
-    ofstream out_wav(argv[2], std::ios::binary);
+    ofstream out_wav(argv[2], ios::binary);
     out_wav.write(reinterpret_cast<const char*>(&h_ff), sizeof(WAVHeader));
     vector<int16_t> decoded_data;
     
